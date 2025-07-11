@@ -24,8 +24,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   const getPhaseText = () => {
     switch (gamePhase) {
+      case 'formation':
+        return 'Form Your Team';
       case 'positioning':
-        return 'Select Your Ninja';
+        return 'Position Your Ninja';
       case 'action':
         return 'Choose Your Action';
       case 'enemy':
@@ -90,7 +92,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
       {/* Element Guide */}
       <div className="mt-4 text-xs opacity-70">
         <div className="text-center">
-          🔥Fire > 🌪️Wind > ⚡Lightning > 🌍Earth > 🌊Water > 🔥Fire
+          ❤️Heart {'>'}💪Body {'>'} ⚡Skill {'>'}🔥Bravery {'>'}🧠Wisdom {'>'}❤️Heart
         </div>
       </div>
     </div>

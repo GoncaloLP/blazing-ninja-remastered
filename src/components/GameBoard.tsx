@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Character, Position, GameState, ElementType } from '../types/game';
+import { Character, Position, GameState, ElementType, Ninjutsu } from '../types/game';
 import { BattleGrid } from './BattleGrid';
 import { CharacterCard } from './CharacterCard';
 import { ActionPanel } from './ActionPanel';
@@ -15,77 +15,122 @@ const createInitialCharacter = (
   element: ElementType,
   position: Position,
   team: 'player' | 'enemy',
-  avatar: string
+  avatar: string,
+  stars: number = 5
 ): Character => ({
   id,
   name,
   element,
-  hp: 100,
-  maxHp: 100,
-  attack: 45,
-  defense: 25,
-  speed: 30,
+  stars,
+  level: 80,
+  maxLevel: 100,
+  hp: 1200 + (stars * 200),
+  maxHp: 1200 + (stars * 200),
+  attack: 800 + (stars * 100),
+  defense: 400 + (stars * 50),
+  speed: 120 + (stars * 20),
   chakra: 0,
-  maxChakra: 100,
+  maxChakra: 4,
   position,
-  attackRange: 2,
-  jutsuRange: 3,
+  attackRange: 'mid',
+  jutsuRange: 'long',
   isAlive: true,
   team,
-  avatar
+  avatar,
+  cost: stars + 10,
+  isAwakened: stars >= 5,
+  ninjutsu: {
+    name: `${name}'s Technique`,
+    description: `${name}'s signature jutsu`,
+    chakraCost: 4,
+    damage: 1.2,
+    range: 'mid',
+    hitCount: 3
+  },
+  ultimateJutsu: stars >= 6 ? {
+    name: `${name}'s Ultimate`,
+    description: `${name}'s ultimate technique`,
+    chakraCost: 8,
+    damage: 2.5,
+    range: 'vast',
+    hitCount: 7
+  } : undefined,
+  fieldSkill: {
+    name: 'Boost ATK',
+    description: 'Boosts attack by 150-300',
+    effect: {
+      type: 'attack_boost',
+      value: 150,
+      target: 'allies'
+    },
+    range: 2
+  },
+  buddySkill: {
+    name: 'Reduces damage',
+    description: 'Reduces damage taken by 15%',
+    effect: {
+      type: 'damage_reduction',
+      value: 15,
+      target: 'self'
+    }
+  }
 });
 
 const GameBoard: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(() => {
     const playerTeam = [
-      createInitialCharacter('p1', 'Naruto', 'wind', { x: 1, y: 6 }, 'player', '🍥'),
-      createInitialCharacter('p2', 'Sasuke', 'lightning', { x: 2, y: 7 }, 'player', '⚡'),
-      createInitialCharacter('p3', 'Sakura', 'earth', { x: 0, y: 7 }, 'player', '🌸'),
+      createInitialCharacter('p1', 'Naruto', 'heart', { x: 1, y: 6 }, 'player', '🍥', 6),
+      createInitialCharacter('p2', 'Sasuke', 'skill', { x: 2, y: 7 }, 'player', '⚡', 6),
+      createInitialCharacter('p3', 'Sakura', 'body', { x: 0, y: 7 }, 'player', '🌸', 5),
     ];
     
     const enemyTeam = [
-      createInitialCharacter('e1', 'Itachi', 'fire', { x: 6, y: 1 }, 'enemy', '🔥'),
-      createInitialCharacter('e2', 'Kisame', 'water', { x: 7, y: 0 }, 'enemy', '🌊'),
-      createInitialCharacter('e3', 'Orochimaru', 'earth', { x: 5, y: 0 }, 'enemy', '🐍'),
+      createInitialCharacter('e1', 'Itachi', 'bravery', { x: 6, y: 1 }, 'enemy', '🔥', 6),
+      createInitialCharacter('e2', 'Kisame', 'wisdom', { x: 7, y: 0 }, 'enemy', '🌊', 6),
+      createInitialCharacter('e3', 'Orochimaru', 'body', { x: 5, y: 0 }, 'enemy', '🐍', 5),
     ];
 
     return {
       playerTeam,
       enemyTeam,
+      frontRow: playerTeam.slice(0, 2),
+      backRow: playerTeam.slice(2),
       currentTurn: 0,
       selectedCharacter: null,
-      gamePhase: 'positioning',
-      sharedPlayerHp: 300,
-      maxSharedPlayerHp: 300,
-      sharedEnemyHp: 300,
-      maxSharedEnemyHp: 300,
+      gamePhase: 'formation',
+      sharedPlayerHp: 4800,
+      maxSharedPlayerHp: 4800,
+      sharedEnemyHp: 4800,
+      maxSharedEnemyHp: 4800,
+      turnTimer: 30,
+      combo: 0,
     };
   });
 
   const getElementAdvantage = (attacker: ElementType, defender: ElementType): number => {
     const advantages: Record<ElementType, ElementType> = {
-      fire: 'wind',
-      wind: 'lightning',
-      lightning: 'earth',
-      earth: 'water',
-      water: 'fire',
+      heart: 'body',
+      body: 'skill', 
+      skill: 'bravery',
+      bravery: 'wisdom',
+      wisdom: 'heart',
     };
     
-    if (advantages[attacker] === defender) return 1.5;
-    if (advantages[defender] === attacker) return 0.7;
-    return 1.0;
+    if (advantages[attacker] === defender) return 2.0; // Strong advantage
+    if (advantages[defender] === attacker) return 0.5; // Weak against
+    return 1.0; // Neutral
   };
 
-  const calculateDamage = (attacker: Character, defender: Character, isJutsu = false): number => {
-    const baseDamage = isJutsu ? attacker.attack * 1.8 : attacker.attack;
+  const calculateDamage = (attacker: Character, defender: Character, jutsu?: Ninjutsu): number => {
+    const baseDamage = jutsu ? attacker.attack * jutsu.damage : attacker.attack;
     const elementMultiplier = getElementAdvantage(attacker.element, defender.element);
-    const defenseFactor = Math.max(0.1, 1 - defender.defense / 200);
+    const defenseFactor = Math.max(0.1, 1 - defender.defense / 4000);
     
     return Math.floor(baseDamage * elementMultiplier * defenseFactor);
   };
 
-  const executeAttack = (attacker: Character, defender: Character, isJutsu = false) => {
-    const damage = calculateDamage(attacker, defender, isJutsu);
+  const executeAttack = (attacker: Character, defender: Character, jutsu?: Ninjutsu) => {
+    const damage = calculateDamage(attacker, defender, jutsu);
     
     setGameState(prev => {
       const newState = { ...prev };
@@ -97,8 +142,8 @@ const GameBoard: React.FC = () => {
         newState.sharedEnemyHp = Math.max(0, newState.sharedEnemyHp - damage);
       }
       
-      // Add chakra to attacker
-      const chakraGain = isJutsu ? 0 : 20;
+      // Add chakra to attacker (1 per normal attack, 0 for jutsu)
+      const chakraGain = jutsu ? 0 : 1;
       if (attacker.team === 'player') {
         const playerIndex = newState.playerTeam.findIndex(c => c.id === attacker.id);
         if (playerIndex >= 0) {
@@ -110,11 +155,16 @@ const GameBoard: React.FC = () => {
       }
       
       // Use chakra for jutsu
-      if (isJutsu && attacker.team === 'player') {
+      if (jutsu && attacker.team === 'player') {
         const playerIndex = newState.playerTeam.findIndex(c => c.id === attacker.id);
         if (playerIndex >= 0) {
-          newState.playerTeam[playerIndex].chakra = Math.max(0, newState.playerTeam[playerIndex].chakra - 50);
+          newState.playerTeam[playerIndex].chakra = Math.max(0, newState.playerTeam[playerIndex].chakra - jutsu.chakraCost);
         }
+      }
+      
+      // Increase combo counter for consecutive attacks
+      if (attacker.team === 'player') {
+        newState.combo += 1;
       }
       
       // Check win conditions
@@ -125,8 +175,9 @@ const GameBoard: React.FC = () => {
       } else {
         // Next turn
         newState.currentTurn += 1;
-        newState.gamePhase = newState.currentTurn % 2 === 0 ? 'positioning' : 'enemy';
+        newState.gamePhase = newState.currentTurn % 2 === 0 ? 'formation' : 'enemy';
         newState.selectedCharacter = null;
+        newState.turnTimer = 30;
       }
       
       return newState;
@@ -134,7 +185,7 @@ const GameBoard: React.FC = () => {
   };
 
   const handleCharacterSelect = (character: Character) => {
-    if (gameState.gamePhase === 'positioning' && character.team === 'player') {
+    if ((gameState.gamePhase === 'formation' || gameState.gamePhase === 'positioning') && character.team === 'player') {
       setGameState(prev => ({
         ...prev,
         selectedCharacter: character,
@@ -156,21 +207,24 @@ const GameBoard: React.FC = () => {
     }
   };
 
-  const handleAction = (actionType: 'attack' | 'jutsu' | 'defend', target?: Character) => {
+  const handleAction = (actionType: 'attack' | 'ninjutsu' | 'ultimate' | 'defend', target?: Character) => {
     const selected = gameState.selectedCharacter;
     if (!selected) return;
 
     if (actionType === 'attack' && target) {
-      executeAttack(selected, target, false);
-    } else if (actionType === 'jutsu' && target && selected.chakra >= 50) {
-      executeAttack(selected, target, true);
+      executeAttack(selected, target);
+    } else if (actionType === 'ninjutsu' && target && selected.chakra >= selected.ninjutsu.chakraCost) {
+      executeAttack(selected, target, selected.ninjutsu);
+    } else if (actionType === 'ultimate' && target && selected.ultimateJutsu && selected.chakra >= selected.ultimateJutsu.chakraCost) {
+      executeAttack(selected, target, selected.ultimateJutsu);
     } else if (actionType === 'defend') {
       // Add defense buff and end turn
       setGameState(prev => ({
         ...prev,
         currentTurn: prev.currentTurn + 1,
         gamePhase: 'enemy',
-        selectedCharacter: null
+        selectedCharacter: null,
+        turnTimer: 30
       }));
     }
   };
@@ -186,7 +240,7 @@ const GameBoard: React.FC = () => {
         if (aliveEnemies.length > 0 && alivePlayers.length > 0) {
           const attacker = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
           const target = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-          executeAttack(attacker, target, false);
+          executeAttack(attacker, target);
         }
       }, 1500);
       

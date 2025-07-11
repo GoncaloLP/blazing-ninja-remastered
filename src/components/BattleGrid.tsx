@@ -42,16 +42,16 @@ export const BattleGrid: React.FC<BattleGridProps> = ({
   const isInAttackRange = (character: Character, x: number, y: number): boolean => {
     const dx = Math.abs(x - character.position.x);
     const dy = Math.abs(y - character.position.y);
-    return Math.sqrt(dx * dx + dy * dy) <= character.attackRange;
+    return Math.sqrt(dx * dx + dy * dy) <= 2; // Simplified range check
   };
 
   const getElementColor = (element: string): string => {
     const colors = {
-      fire: 'bg-red-500',
-      water: 'bg-blue-500',
-      earth: 'bg-yellow-600',
-      lightning: 'bg-purple-500',
-      wind: 'bg-green-500',
+      heart: 'bg-red-500',
+      body: 'bg-yellow-500',
+      skill: 'bg-blue-500',
+      bravery: 'bg-orange-500',
+      wisdom: 'bg-green-500',
     };
     return colors[element as keyof typeof colors] || 'bg-gray-500';
   };
@@ -95,7 +95,7 @@ export const BattleGrid: React.FC<BattleGridProps> = ({
               {character && (
                 <div className="relative">
                   <span className="drop-shadow-lg">{character.avatar}</span>
-                  {character.chakra >= 50 && (
+                  {character.chakra >= character.ninjutsu.chakraCost && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
                   )}
                 </div>
