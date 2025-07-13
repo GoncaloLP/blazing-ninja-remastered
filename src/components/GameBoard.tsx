@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Character, Position, GameState, ElementType, Ninjutsu } from '../types/game';
-import { BattleGrid } from './BattleGrid';
+import { BattleArea } from './BattleArea';
 import { CharacterCard } from './CharacterCard';
 import { ActionPanel } from './ActionPanel';
 import { GameHUD } from './GameHUD';
@@ -13,81 +13,88 @@ const createInitialCharacter = (
   id: string,
   name: string,
   element: ElementType,
-  position: Position,
   team: 'player' | 'enemy',
   avatar: string,
-  stars: number = 5
-): Character => ({
-  id,
-  name,
-  element,
-  stars,
-  level: 80,
-  maxLevel: 100,
-  hp: 1200 + (stars * 200),
-  maxHp: 1200 + (stars * 200),
-  attack: 800 + (stars * 100),
-  defense: 400 + (stars * 50),
-  speed: 120 + (stars * 20),
-  chakra: 0,
-  maxChakra: 4,
-  position,
-  attackRange: 'mid',
-  jutsuRange: 'long',
-  isAlive: true,
-  team,
-  avatar,
-  cost: stars + 10,
-  isAwakened: stars >= 5,
-  ninjutsu: {
-    name: `${name}'s Technique`,
-    description: `${name}'s signature jutsu`,
-    chakraCost: 4,
-    damage: 1.2,
-    range: 'mid',
-    hitCount: 3
-  },
-  ultimateJutsu: stars >= 6 ? {
-    name: `${name}'s Ultimate`,
-    description: `${name}'s ultimate technique`,
-    chakraCost: 8,
-    damage: 2.5,
-    range: 'vast',
-    hitCount: 7
-  } : undefined,
-  fieldSkill: {
-    name: 'Boost ATK',
-    description: 'Boosts attack by 150-300',
-    effect: {
-      type: 'attack_boost',
-      value: 150,
-      target: 'allies'
+  stars: number = 5,
+  spawnColumn: number = 0
+): Character => {
+  // Player characters spawn in columns, enemies spawn on right side
+  const position: Position = team === 'player' 
+    ? { x: 80 + (spawnColumn * 120), y: 200 + (Math.random() * 200) }
+    : { x: 500 + Math.random() * 100, y: 150 + Math.random() * 300 };
+
+  return {
+    id,
+    name,
+    element,
+    stars,
+    level: 80,
+    maxLevel: 100,
+    hp: 1200 + (stars * 200),
+    maxHp: 1200 + (stars * 200),
+    attack: 800 + (stars * 100),
+    defense: 400 + (stars * 50),
+    speed: 120 + (stars * 20),
+    chakra: 0,
+    maxChakra: 4,
+    position,
+    attackRange: stars >= 6 ? 'long' : 'mid',
+    jutsuRange: 'long',
+    isAlive: true,
+    team,
+    avatar,
+    cost: stars + 10,
+    isAwakened: stars >= 5,
+    ninjutsu: {
+      name: `${name}'s Technique`,
+      description: `${name}'s signature jutsu`,
+      chakraCost: 4,
+      damage: 1.2,
+      range: 'mid',
+      hitCount: 3
     },
-    range: 2
-  },
-  buddySkill: {
-    name: 'Reduces damage',
-    description: 'Reduces damage taken by 15%',
-    effect: {
-      type: 'damage_reduction',
-      value: 15,
-      target: 'self'
+    ultimateJutsu: stars >= 6 ? {
+      name: `${name}'s Ultimate`,
+      description: `${name}'s ultimate technique`,
+      chakraCost: 8,
+      damage: 2.5,
+      range: 'vast',
+      hitCount: 7
+    } : undefined,
+    fieldSkill: {
+      name: 'Boost ATK',
+      description: 'Boosts attack by 150-300',
+      effect: {
+        type: 'attack_boost',
+        value: 150,
+        target: 'allies'
+      },
+      range: 2
+    },
+    buddySkill: {
+      name: 'Reduces damage',
+      description: 'Reduces damage taken by 15%',
+      effect: {
+        type: 'damage_reduction',
+        value: 15,
+        target: 'self'
+      }
     }
-  }
-});
+  };
+};
 
 const GameBoard: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(() => {
     const playerTeam = [
-      createInitialCharacter('p1', 'Naruto', 'heart', { x: 1, y: 6 }, 'player', '🍥', 6),
-      createInitialCharacter('p2', 'Sasuke', 'skill', { x: 2, y: 7 }, 'player', '⚡', 6),
-      createInitialCharacter('p3', 'Sakura', 'body', { x: 0, y: 7 }, 'player', '🌸', 5),
+      createInitialCharacter('p1', 'Naruto', 'heart', 'player', '🍥', 6, 0),
+      createInitialCharacter('p2', 'Sasuke', 'skill', 'player', '⚡', 6, 1),
+      createInitialCharacter('p3', 'Sakura', 'body', 'player', '🌸', 5, 0),
     ];
     
     const enemyTeam = [
-      createInitialCharacter('e1', 'Itachi', 'bravery', { x: 6, y: 1 }, 'enemy', '🔥', 6),
-      createInitialCharacter('e2', 'Kisame', 'wisdom', { x: 7, y: 0 }, 'enemy', '🌊', 6),
-      createInitialCharacter('e3', 'Orochimaru', 'body', { x: 5, y: 0 }, 'enemy', '🐍', 5),
+      createInitialCharacter('e1', 'Itachi', 'bravery', 'enemy', '🔥', 6),
+      createInitialCharacter('e2', 'Kisame', 'wisdom', 'enemy', '🌊', 6),
+      createInitialCharacter('e3', 'Orochimaru', 'body', 'enemy', '🐍', 5),
     ];
 
     return {
@@ -97,7 +104,7 @@ const GameBoard: React.FC = () => {
       backRow: playerTeam.slice(2),
       currentTurn: 0,
       selectedCharacter: null,
-      gamePhase: 'formation',
+      gamePhase: 'battle',
       sharedPlayerHp: 4800,
       maxSharedPlayerHp: 4800,
       sharedEnemyHp: 4800,
@@ -194,17 +201,60 @@ const GameBoard: React.FC = () => {
     }
   };
 
-  const handleMove = (newPosition: Position) => {
-    if (gameState.selectedCharacter && gameState.gamePhase === 'action') {
-      setGameState(prev => {
-        const newState = { ...prev };
-        const characterIndex = newState.playerTeam.findIndex(c => c.id === prev.selectedCharacter!.id);
-        if (characterIndex >= 0) {
-          newState.playerTeam[characterIndex].position = newPosition;
+  const handleCharacterMove = (characterId: string, x: number, y: number) => {
+    setGameState(prev => {
+      const newState = { ...prev };
+      const characterIndex = newState.playerTeam.findIndex(c => c.id === characterId);
+      if (characterIndex >= 0) {
+        newState.playerTeam[characterIndex].position = { x, y };
+      }
+      return newState;
+    });
+  };
+
+  const handleAttackTrigger = (attackerIds: string[], targetId: string) => {
+    const attackers = gameState.playerTeam.filter(c => attackerIds.includes(c.id));
+    const target = gameState.enemyTeam.find(c => c.id === targetId);
+    
+    if (attackers.length === 0 || !target) return;
+
+    // Calculate linked attack damage
+    const totalDamage = attackers.reduce((total, attacker) => {
+      const baseDamage = calculateDamage(attacker, target);
+      return total + baseDamage;
+    }, 0);
+
+    // Apply linked attack bonus (20% extra damage per additional attacker)
+    const linkBonus = attackers.length > 1 ? 1 + ((attackers.length - 1) * 0.2) : 1;
+    const finalDamage = Math.floor(totalDamage * linkBonus);
+
+    setGameState(prev => {
+      const newState = { ...prev };
+      
+      // Apply damage to shared HP
+      newState.sharedEnemyHp = Math.max(0, newState.sharedEnemyHp - finalDamage);
+      
+      // Add chakra to attackers
+      attackers.forEach(attacker => {
+        const playerIndex = newState.playerTeam.findIndex(c => c.id === attacker.id);
+        if (playerIndex >= 0) {
+          newState.playerTeam[playerIndex].chakra = Math.min(
+            newState.playerTeam[playerIndex].maxChakra,
+            newState.playerTeam[playerIndex].chakra + 1
+          );
         }
-        return newState;
       });
-    }
+      
+      // Increase combo counter
+      newState.combo += attackers.length;
+      
+      // Check win condition
+      if (newState.sharedEnemyHp <= 0) {
+        newState.gamePhase = 'victory';
+      }
+      
+      return newState;
+    });
   };
 
   const handleAction = (actionType: 'attack' | 'ninjutsu' | 'ultimate' | 'defend', target?: Character) => {
@@ -269,7 +319,7 @@ const GameBoard: React.FC = () => {
           gamePhase={gameState.gamePhase}
         />
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
           {/* Player Team */}
           <div className="space-y-4">
             <h3 className="text-white font-bold text-lg">Your Team</h3>
@@ -283,15 +333,13 @@ const GameBoard: React.FC = () => {
             ))}
           </div>
           
-          {/* Battle Grid */}
-          <div className="lg:col-span-2">
-            <BattleGrid
-              size={GRID_SIZE}
+          {/* Battle Area */}
+          <div className="lg:col-span-3">
+            <BattleArea
               playerTeam={gameState.playerTeam}
               enemyTeam={gameState.enemyTeam}
-              selectedCharacter={gameState.selectedCharacter}
-              onCharacterSelect={handleCharacterSelect}
-              onMove={handleMove}
+              onCharacterMove={handleCharacterMove}
+              onAttackTrigger={handleAttackTrigger}
               gamePhase={gameState.gamePhase}
             />
           </div>

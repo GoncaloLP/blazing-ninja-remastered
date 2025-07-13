@@ -78,7 +78,7 @@ export interface GameState {
   backRow: Character[];
   currentTurn: number;
   selectedCharacter: Character | null;
-  gamePhase: 'formation' | 'positioning' | 'action' | 'enemy' | 'victory' | 'defeat';
+  gamePhase: 'formation' | 'positioning' | 'action' | 'battle' | 'enemy' | 'victory' | 'defeat';
   sharedPlayerHp: number;
   maxSharedPlayerHp: number;
   sharedEnemyHp: number;
