@@ -25,6 +25,8 @@ export interface Character {
   ultimateJutsu?: Ninjutsu;
   cost: number;
   isAwakened: boolean;
+  hasAttacked: boolean;
+  isInStartPosition: boolean;
 }
 
 export interface Position {
@@ -71,6 +73,12 @@ export interface NinjutsuEffect {
   value: number;
 }
 
+export interface SpawnPoint {
+  x: number;
+  y: number;
+  isOccupied: boolean;
+}
+
 export interface GameState {
   playerTeam: Character[];
   enemyTeam: Character[];
@@ -79,10 +87,8 @@ export interface GameState {
   currentTurn: number;
   selectedCharacter: Character | null;
   gamePhase: 'formation' | 'positioning' | 'action' | 'battle' | 'enemy' | 'victory' | 'defeat';
-  sharedPlayerHp: number;
-  maxSharedPlayerHp: number;
-  sharedEnemyHp: number;
-  maxSharedEnemyHp: number;
+  playerSpawnPoints: SpawnPoint[];
+  enemySpawnPoints: SpawnPoint[];
   turnTimer: number;
   combo: number;
 }

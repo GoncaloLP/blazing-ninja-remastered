@@ -1,27 +1,19 @@
-
 import React, { useState, useEffect } from 'react';
-import { Character, Position, GameState, ElementType, Ninjutsu } from '../types/game';
+import { Character, Position, GameState, ElementType, Ninjutsu, SpawnPoint } from '../types/game';
 import { BattleArea } from './BattleArea';
 import { CharacterCard } from './CharacterCard';
-import { ActionPanel } from './ActionPanel';
-import { GameHUD } from './GameHUD';
 import { VictoryScreen } from './VictoryScreen';
-
-const GRID_SIZE = 8;
 
 const createInitialCharacter = (
   id: string,
   name: string,
   element: ElementType,
   team: 'player' | 'enemy',
-  avatar: string,
   stars: number = 5,
-  spawnColumn: number = 0
+  spawnIndex: number = 0
 ): Character => {
-  // Player characters spawn in columns, enemies spawn on right side
-  const position: Position = team === 'player' 
-    ? { x: 80 + (spawnColumn * 120), y: 200 + (Math.random() * 200) }
-    : { x: 500 + Math.random() * 100, y: 150 + Math.random() * 300 };
+  // Default positions - will be updated with proper spawn points
+  const position: Position = { x: 100, y: 200 };
 
   return {
     id,
@@ -42,9 +34,11 @@ const createInitialCharacter = (
     jutsuRange: 'long',
     isAlive: true,
     team,
-    avatar,
+    avatar: name,
     cost: stars + 10,
     isAwakened: stars >= 5,
+    hasAttacked: false,
+    isInStartPosition: true,
     ninjutsu: {
       name: `${name}'s Technique`,
       description: `${name}'s signature jutsu`,
@@ -85,17 +79,49 @@ const createInitialCharacter = (
 
 const GameBoard: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(() => {
+    // Create spawn points
+    const playerSpawnPoints: SpawnPoint[] = [
+      { x: 80, y: 120, isOccupied: false },  // First border top
+      { x: 80, y: 280, isOccupied: false }, // First border bottom
+      { x: 160, y: 200, isOccupied: false } // Second border middle
+    ];
+
+    const enemySpawnPoints: SpawnPoint[] = [
+      { x: 450, y: 80, isOccupied: false },
+      { x: 500, y: 130, isOccupied: false },
+      { x: 550, y: 180, isOccupied: false },
+      { x: 500, y: 230, isOccupied: false },
+      { x: 450, y: 280, isOccupied: false },
+      { x: 400, y: 320, isOccupied: false },
+      { x: 350, y: 360, isOccupied: false }
+    ];
+
     const playerTeam = [
-      createInitialCharacter('p1', 'Naruto', 'heart', 'player', '🍥', 6, 0),
-      createInitialCharacter('p2', 'Sasuke', 'skill', 'player', '⚡', 6, 1),
-      createInitialCharacter('p3', 'Sakura', 'body', 'player', '🌸', 5, 0),
+      createInitialCharacter('p1', 'Naruto', 'heart', 'player', 6, 0),
+      createInitialCharacter('p2', 'Sasuke', 'skill', 'player', 6, 1),
+      createInitialCharacter('p3', 'Sakura', 'body', 'player', 5, 2),
     ];
     
     const enemyTeam = [
-      createInitialCharacter('e1', 'Itachi', 'bravery', 'enemy', '🔥', 6),
-      createInitialCharacter('e2', 'Kisame', 'wisdom', 'enemy', '🌊', 6),
-      createInitialCharacter('e3', 'Orochimaru', 'body', 'enemy', '🐍', 5),
+      createInitialCharacter('e1', 'Itachi', 'bravery', 'enemy', 6, 0),
+      createInitialCharacter('e2', 'Kisame', 'wisdom', 'enemy', 6, 1),
+      createInitialCharacter('e3', 'Orochimaru', 'body', 'enemy', 5, 2),
     ];
+
+    // Position characters at spawn points
+    playerTeam.forEach((char, index) => {
+      if (playerSpawnPoints[index]) {
+        char.position = { x: playerSpawnPoints[index].x, y: playerSpawnPoints[index].y };
+        playerSpawnPoints[index].isOccupied = true;
+      }
+    });
+
+    enemyTeam.forEach((char, index) => {
+      if (enemySpawnPoints[index]) {
+        char.position = { x: enemySpawnPoints[index].x, y: enemySpawnPoints[index].y };
+        enemySpawnPoints[index].isOccupied = true;
+      }
+    });
 
     return {
       playerTeam,
@@ -105,10 +131,8 @@ const GameBoard: React.FC = () => {
       currentTurn: 0,
       selectedCharacter: null,
       gamePhase: 'battle',
-      sharedPlayerHp: 4800,
-      maxSharedPlayerHp: 4800,
-      sharedEnemyHp: 4800,
-      maxSharedEnemyHp: 4800,
+      playerSpawnPoints,
+      enemySpawnPoints,
       turnTimer: 30,
       combo: 0,
     };
@@ -123,82 +147,17 @@ const GameBoard: React.FC = () => {
       wisdom: 'heart',
     };
     
-    if (advantages[attacker] === defender) return 2.0; // Strong advantage
-    if (advantages[defender] === attacker) return 0.5; // Weak against
-    return 1.0; // Neutral
+    if (advantages[attacker] === defender) return 2.0;
+    if (advantages[defender] === attacker) return 0.5;
+    return 1.0;
   };
 
-  const calculateDamage = (attacker: Character, defender: Character, jutsu?: Ninjutsu): number => {
-    const baseDamage = jutsu ? attacker.attack * jutsu.damage : attacker.attack;
+  const calculateDamage = (attacker: Character, defender: Character): number => {
+    const baseDamage = attacker.attack;
     const elementMultiplier = getElementAdvantage(attacker.element, defender.element);
     const defenseFactor = Math.max(0.1, 1 - defender.defense / 4000);
     
     return Math.floor(baseDamage * elementMultiplier * defenseFactor);
-  };
-
-  const executeAttack = (attacker: Character, defender: Character, jutsu?: Ninjutsu) => {
-    const damage = calculateDamage(attacker, defender, jutsu);
-    
-    setGameState(prev => {
-      const newState = { ...prev };
-      
-      // Apply damage to shared HP
-      if (defender.team === 'player') {
-        newState.sharedPlayerHp = Math.max(0, newState.sharedPlayerHp - damage);
-      } else {
-        newState.sharedEnemyHp = Math.max(0, newState.sharedEnemyHp - damage);
-      }
-      
-      // Add chakra to attacker (1 per normal attack, 0 for jutsu)
-      const chakraGain = jutsu ? 0 : 1;
-      if (attacker.team === 'player') {
-        const playerIndex = newState.playerTeam.findIndex(c => c.id === attacker.id);
-        if (playerIndex >= 0) {
-          newState.playerTeam[playerIndex].chakra = Math.min(
-            newState.playerTeam[playerIndex].maxChakra,
-            newState.playerTeam[playerIndex].chakra + chakraGain
-          );
-        }
-      }
-      
-      // Use chakra for jutsu
-      if (jutsu && attacker.team === 'player') {
-        const playerIndex = newState.playerTeam.findIndex(c => c.id === attacker.id);
-        if (playerIndex >= 0) {
-          newState.playerTeam[playerIndex].chakra = Math.max(0, newState.playerTeam[playerIndex].chakra - jutsu.chakraCost);
-        }
-      }
-      
-      // Increase combo counter for consecutive attacks
-      if (attacker.team === 'player') {
-        newState.combo += 1;
-      }
-      
-      // Check win conditions
-      if (newState.sharedPlayerHp <= 0) {
-        newState.gamePhase = 'defeat';
-      } else if (newState.sharedEnemyHp <= 0) {
-        newState.gamePhase = 'victory';
-      } else {
-        // Next turn
-        newState.currentTurn += 1;
-        newState.gamePhase = newState.currentTurn % 2 === 0 ? 'formation' : 'enemy';
-        newState.selectedCharacter = null;
-        newState.turnTimer = 30;
-      }
-      
-      return newState;
-    });
-  };
-
-  const handleCharacterSelect = (character: Character) => {
-    if ((gameState.gamePhase === 'formation' || gameState.gamePhase === 'positioning') && character.team === 'player') {
-      setGameState(prev => ({
-        ...prev,
-        selectedCharacter: character,
-        gamePhase: 'action'
-      }));
-    }
   };
 
   const handleCharacterMove = (characterId: string, x: number, y: number) => {
@@ -207,90 +166,98 @@ const GameBoard: React.FC = () => {
       const characterIndex = newState.playerTeam.findIndex(c => c.id === characterId);
       if (characterIndex >= 0) {
         newState.playerTeam[characterIndex].position = { x, y };
+        newState.playerTeam[characterIndex].isInStartPosition = false;
       }
       return newState;
     });
   };
 
-  const handleAttackTrigger = (attackerIds: string[], targetId: string) => {
-    const attackers = gameState.playerTeam.filter(c => attackerIds.includes(c.id));
-    const target = gameState.enemyTeam.find(c => c.id === targetId);
-    
-    if (attackers.length === 0 || !target) return;
-
-    // Calculate linked attack damage
-    const totalDamage = attackers.reduce((total, attacker) => {
-      const baseDamage = calculateDamage(attacker, target);
-      return total + baseDamage;
-    }, 0);
-
-    // Apply linked attack bonus (20% extra damage per additional attacker)
-    const linkBonus = attackers.length > 1 ? 1 + ((attackers.length - 1) * 0.2) : 1;
-    const finalDamage = Math.floor(totalDamage * linkBonus);
-
+  const handleCharacterAttack = (attackerId: string, targetId: string) => {
     setGameState(prev => {
       const newState = { ...prev };
       
-      // Apply damage to shared HP
-      newState.sharedEnemyHp = Math.max(0, newState.sharedEnemyHp - finalDamage);
+      const attacker = newState.playerTeam.find(c => c.id === attackerId);
+      const target = newState.enemyTeam.find(c => c.id === targetId);
       
-      // Add chakra to attackers
-      attackers.forEach(attacker => {
-        const playerIndex = newState.playerTeam.findIndex(c => c.id === attacker.id);
-        if (playerIndex >= 0) {
-          newState.playerTeam[playerIndex].chakra = Math.min(
-            newState.playerTeam[playerIndex].maxChakra,
-            newState.playerTeam[playerIndex].chakra + 1
-          );
-        }
-      });
+      if (!attacker || !target || attacker.hasAttacked || !target.isAlive) return prev;
+
+      // Calculate damage
+      const damage = calculateDamage(attacker, target);
       
-      // Increase combo counter
-      newState.combo += attackers.length;
+      // Apply damage
+      const targetIndex = newState.enemyTeam.findIndex(c => c.id === targetId);
+      newState.enemyTeam[targetIndex].hp = Math.max(0, newState.enemyTeam[targetIndex].hp - damage);
       
-      // Check win condition
-      if (newState.sharedEnemyHp <= 0) {
-        newState.gamePhase = 'victory';
+      // Mark character as having attacked
+      const attackerIndex = newState.playerTeam.findIndex(c => c.id === attackerId);
+      newState.playerTeam[attackerIndex].hasAttacked = true;
+      newState.playerTeam[attackerIndex].chakra = Math.min(
+        newState.playerTeam[attackerIndex].maxChakra,
+        newState.playerTeam[attackerIndex].chakra + 1
+      );
+
+      // Check if target is defeated
+      if (newState.enemyTeam[targetIndex].hp <= 0) {
+        newState.enemyTeam[targetIndex].isAlive = false;
       }
+
+      // Check win/lose conditions
+      const aliveEnemies = newState.enemyTeam.filter(c => c.isAlive);
+      const alivePlayers = newState.playerTeam.filter(c => c.isAlive);
       
+      if (aliveEnemies.length === 0) {
+        newState.gamePhase = 'victory';
+      } else if (alivePlayers.length === 0) {
+        newState.gamePhase = 'defeat';
+      }
+
       return newState;
     });
   };
 
-  const handleAction = (actionType: 'attack' | 'ninjutsu' | 'ultimate' | 'defend', target?: Character) => {
-    const selected = gameState.selectedCharacter;
-    if (!selected) return;
-
-    if (actionType === 'attack' && target) {
-      executeAttack(selected, target);
-    } else if (actionType === 'ninjutsu' && target && selected.chakra >= selected.ninjutsu.chakraCost) {
-      executeAttack(selected, target, selected.ninjutsu);
-    } else if (actionType === 'ultimate' && target && selected.ultimateJutsu && selected.chakra >= selected.ultimateJutsu.chakraCost) {
-      executeAttack(selected, target, selected.ultimateJutsu);
-    } else if (actionType === 'defend') {
-      // Add defense buff and end turn
-      setGameState(prev => ({
-        ...prev,
-        currentTurn: prev.currentTurn + 1,
-        gamePhase: 'enemy',
-        selectedCharacter: null,
-        turnTimer: 30
-      }));
-    }
+  // Reset attacks for new turn
+  const resetTurn = () => {
+    setGameState(prev => ({
+      ...prev,
+      playerTeam: prev.playerTeam.map(char => ({ ...char, hasAttacked: false })),
+      currentTurn: prev.currentTurn + 1
+    }));
   };
 
   // Enemy AI turn
   useEffect(() => {
     if (gameState.gamePhase === 'enemy') {
       const timer = setTimeout(() => {
-        // Simple AI: random enemy attacks random player
         const aliveEnemies = gameState.enemyTeam.filter(c => c.isAlive);
         const alivePlayers = gameState.playerTeam.filter(c => c.isAlive);
         
         if (aliveEnemies.length > 0 && alivePlayers.length > 0) {
+          // Simple AI: random enemy attacks random player
           const attacker = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
           const target = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
-          executeAttack(attacker, target);
+          
+          setGameState(prev => {
+            const newState = { ...prev };
+            const damage = calculateDamage(attacker, target);
+            
+            const targetIndex = newState.playerTeam.findIndex(c => c.id === target.id);
+            newState.playerTeam[targetIndex].hp = Math.max(0, newState.playerTeam[targetIndex].hp - damage);
+            
+            if (newState.playerTeam[targetIndex].hp <= 0) {
+              newState.playerTeam[targetIndex].isAlive = false;
+            }
+
+            // Check win/lose conditions
+            const alivePlayers = newState.playerTeam.filter(c => c.isAlive);
+            if (alivePlayers.length === 0) {
+              newState.gamePhase = 'defeat';
+            } else {
+              newState.gamePhase = 'battle';
+              resetTurn();
+            }
+
+            return newState;
+          });
         }
       }, 1500);
       
@@ -308,54 +275,55 @@ const GameBoard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-500 to-purple-600 p-4">
-      <div className="max-w-7xl mx-auto">
-        <GameHUD 
-          playerHp={gameState.sharedPlayerHp}
-          maxPlayerHp={gameState.maxSharedPlayerHp}
-          enemyHp={gameState.sharedEnemyHp}
-          maxEnemyHp={gameState.maxSharedEnemyHp}
-          currentTurn={gameState.currentTurn}
+    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-red-500 to-purple-600 p-2">
+      <div className="max-w-lg mx-auto">
+        {/* HUD */}
+        <div className="bg-black/50 rounded-lg p-3 mb-4 text-white">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm">Turn: {gameState.currentTurn}</p>
+              <p className="text-xs">Phase: {gameState.gamePhase}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-xs">
+                <span className="text-blue-400">Players: {gameState.playerTeam.filter(c => c.isAlive).length}</span>
+                <span className="mx-2">|</span>
+                <span className="text-red-400">Enemies: {gameState.enemyTeam.filter(c => c.isAlive).length}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Battle Area */}
+        <BattleArea
+          playerTeam={gameState.playerTeam}
+          enemyTeam={gameState.enemyTeam}
+          playerSpawnPoints={gameState.playerSpawnPoints}
+          enemySpawnPoints={gameState.enemySpawnPoints}
+          onCharacterMove={handleCharacterMove}
+          onCharacterAttack={handleCharacterAttack}
           gamePhase={gameState.gamePhase}
         />
         
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6">
-          {/* Player Team */}
-          <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg">Your Team</h3>
-            {gameState.playerTeam.map(character => (
-              <CharacterCard
-                key={character.id}
-                character={character}
-                isSelected={gameState.selectedCharacter?.id === character.id}
-                onClick={() => handleCharacterSelect(character)}
-              />
-            ))}
+        {/* Character Cards */}
+        <div className="mt-4 space-y-3">
+          <div>
+            <h3 className="text-white font-bold text-sm mb-2">Your Team</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {gameState.playerTeam.map(character => (
+                <CharacterCard
+                  key={character.id}
+                  character={character}
+                  isSelected={false}
+                  onClick={() => {}}
+                />
+              ))}
+            </div>
           </div>
           
-          {/* Battle Area */}
-          <div className="lg:col-span-3">
-            <BattleArea
-              playerTeam={gameState.playerTeam}
-              enemyTeam={gameState.enemyTeam}
-              onCharacterMove={handleCharacterMove}
-              onAttackTrigger={handleAttackTrigger}
-              gamePhase={gameState.gamePhase}
-            />
-          </div>
-          
-          {/* Action Panel & Enemy Team */}
-          <div className="space-y-4">
-            {gameState.selectedCharacter && (
-              <ActionPanel
-                character={gameState.selectedCharacter}
-                enemyTeam={gameState.enemyTeam}
-                onAction={handleAction}
-              />
-            )}
-            
-            <div className="space-y-4">
-              <h3 className="text-white font-bold text-lg">Enemy Team</h3>
+          <div>
+            <h3 className="text-white font-bold text-sm mb-2">Enemy Team</h3>
+            <div className="grid grid-cols-3 gap-2">
               {gameState.enemyTeam.map(character => (
                 <CharacterCard
                   key={character.id}
@@ -367,6 +335,16 @@ const GameBoard: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Turn Controls */}
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={resetTurn}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold"
+          >
+            End Turn
+          </button>
         </div>
       </div>
     </div>
