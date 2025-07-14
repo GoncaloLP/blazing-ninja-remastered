@@ -39,6 +39,9 @@ const createInitialCharacter = (
     isAwakened: stars >= 5,
     hasAttacked: false,
     isInStartPosition: true,
+    canMove: true,
+    canAct: true,
+    statusEffects: [],
     ninjutsu: {
       name: `${name}'s Technique`,
       description: `${name}'s signature jutsu`,
@@ -303,6 +306,8 @@ const GameBoard: React.FC = () => {
           onCharacterMove={handleCharacterMove}
           onCharacterAttack={handleCharacterAttack}
           gamePhase={gameState.gamePhase}
+          selectedCharacter={gameState.selectedCharacter?.id || null}
+          currentTurn={gameState.currentTurn % 2 === 0 ? 'player' : 'enemy'}
         />
         
         {/* Character Cards */}

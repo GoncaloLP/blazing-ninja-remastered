@@ -27,6 +27,15 @@ export interface Character {
   isAwakened: boolean;
   hasAttacked: boolean;
   isInStartPosition: boolean;
+  canMove: boolean;
+  canAct: boolean;
+  statusEffects: StatusEffect[];
+}
+
+export interface StatusEffect {
+  type: 'poison' | 'burn' | 'seal' | 'immobilize' | 'attack_boost' | 'defense_boost';
+  duration: number;
+  value?: number;
 }
 
 export interface Position {
