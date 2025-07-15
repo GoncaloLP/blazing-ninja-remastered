@@ -1,9 +1,9 @@
 
 import React from 'react';
-import GameBoard from '../components/GameBoard';
+import { BlaziingApp } from '../components/BlaziingApp';
 
 const Index = () => {
-  return <GameBoard />;
+  return <BlaziingApp />;
 };
 
 export default Index;
