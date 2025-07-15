@@ -45,23 +45,31 @@ export const BlaziingApp: React.FC = () => {
   const renderCurrentScreen = () => {
     switch (gameState.currentScreen) {
       case 'home':
-        return <HomeScreen />;
+        return <HomeScreen onNavigate={navigateToScreen} />;
       case 'summon':
-        return <SummonScreen />;
+        return <SummonScreen onNavigate={navigateToScreen} />;
       case 'box':
-        return <BoxScreen />;
+        return <BoxScreen onNavigate={navigateToScreen} />;
       case 'story':
-        return <StoryScreen />;
+        return <StoryScreen onNavigate={navigateToScreen} />;
       case 'battle':
-        return <div className="flex items-center justify-center h-screen bg-black text-white">
-          <p>Battle System Coming Soon!</p>
+        return <div className="min-h-screen bg-gradient-to-br from-orange-600 via-red-600 to-pink-700 flex items-center justify-center">
+          <div className="text-white text-center">
+            <div className="text-4xl mb-4">⚔️</div>
+            <p className="text-xl font-bold">Battle System</p>
+            <p className="text-sm opacity-80">Coming Soon!</p>
+          </div>
         </div>;
       case 'settings':
-        return <div className="flex items-center justify-center h-screen bg-black text-white">
-          <p>Settings Coming Soon!</p>
+        return <div className="min-h-screen bg-gradient-to-br from-orange-600 via-red-600 to-pink-700 flex items-center justify-center">
+          <div className="text-white text-center">
+            <div className="text-4xl mb-4">⚙️</div>
+            <p className="text-xl font-bold">Settings</p>
+            <p className="text-sm opacity-80">Coming Soon!</p>
+          </div>
         </div>;
       default:
-        return <HomeScreen />;
+        return <HomeScreen onNavigate={navigateToScreen} />;
     }
   };
 

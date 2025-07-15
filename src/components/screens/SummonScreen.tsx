@@ -3,7 +3,11 @@ import { MobileLayout } from '../mobile/MobileLayout';
 import { BlaziingCharacter } from '../../types/blazing';
 import { CHARACTERS } from '../../data/characters';
 
-export const SummonScreen: React.FC = () => {
+interface SummonScreenProps {
+  onNavigate: (screen: string) => void;
+}
+
+export const SummonScreen: React.FC<SummonScreenProps> = ({ onNavigate }) => {
   const [selectedBanner, setSelectedBanner] = useState<'blazing' | 'rookie'>('blazing');
   const [summoning, setSummoning] = useState(false);
   const [summonResults, setSummonResults] = useState<BlaziingCharacter[]>([]);
@@ -74,7 +78,7 @@ export const SummonScreen: React.FC = () => {
   }
 
   return (
-    <MobileLayout>
+    <MobileLayout currentScreen="summon" onNavigate={onNavigate}>
       <div className="flex flex-col h-full">
         {/* Banner Selector */}
         <div className="px-4 py-3">

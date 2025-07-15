@@ -1,9 +1,13 @@
 import React from 'react';
 import { MobileLayout } from '../mobile/MobileLayout';
 
-export const HomeScreen: React.FC = () => {
+interface HomeScreenProps {
+  onNavigate: (screen: string) => void;
+}
+
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   return (
-    <MobileLayout>
+    <MobileLayout currentScreen="home" onNavigate={onNavigate}>
       <div className="flex flex-col h-full">
         {/* Banner Section */}
         <div className="relative h-48 bg-gradient-to-r from-blue-600 to-purple-700 m-4 rounded-lg overflow-hidden shadow-xl">
@@ -30,24 +34,28 @@ export const HomeScreen: React.FC = () => {
               subtitle="Get 10 characters!"
               icon="⭐"
               color="from-purple-500 to-pink-500"
+              onClick={() => onNavigate('summon')}
             />
             <QuickActionCard
               title="Story Mode"
               subtitle="Continue adventure"
               icon="🗺️"
               color="from-green-500 to-teal-500"
+              onClick={() => onNavigate('story')}
             />
             <QuickActionCard
               title="Emergency Mission"
               subtitle="Limited time!"
               icon="🚨"
               color="from-red-500 to-orange-500"
+              onClick={() => onNavigate('story')}
             />
             <QuickActionCard
               title="Phantom Castle"
               subtitle="Climb floors"
               icon="🏰"
               color="from-indigo-500 to-blue-500"
+              onClick={() => onNavigate('battle')}
             />
           </div>
         </div>
@@ -94,10 +102,11 @@ interface QuickActionCardProps {
   subtitle: string;
   icon: string;
   color: string;
+  onClick: () => void;
 }
 
-const QuickActionCard: React.FC<QuickActionCardProps> = ({ title, subtitle, icon, color }) => (
-  <div className={`bg-gradient-to-br ${color} rounded-lg p-4 shadow-lg active:scale-95 transition-transform`}>
+const QuickActionCard: React.FC<QuickActionCardProps> = ({ title, subtitle, icon, color, onClick }) => (
+  <button onClick={onClick} className={`bg-gradient-to-br ${color} rounded-lg p-4 shadow-lg active:scale-95 transition-transform`}>
     <div className="flex items-center space-x-3">
       <div className="text-2xl">{icon}</div>
       <div>
@@ -105,7 +114,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({ title, subtitle, icon
         <p className="text-white/80 text-xs">{subtitle}</p>
       </div>
     </div>
-  </div>
+  </button>
 );
 
 interface NewsItemProps {

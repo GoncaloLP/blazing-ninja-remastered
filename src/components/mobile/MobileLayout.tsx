@@ -4,16 +4,20 @@ interface MobileLayoutProps {
   children: ReactNode;
   showHeader?: boolean;
   showFooter?: boolean;
+  currentScreen?: string;
+  onNavigate?: (screen: string) => void;
 }
 
 export const MobileLayout: React.FC<MobileLayoutProps> = ({ 
   children, 
   showHeader = true, 
-  showFooter = true 
+  showFooter = true,
+  currentScreen = 'home',
+  onNavigate
 }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-600 via-red-600 to-pink-700 flex flex-col">
-      {/* Status Bar Placeholder */}
+      {/* Status Bar */}
       <div className="h-6 bg-black/20" />
       
       {/* Header */}
@@ -22,24 +26,24 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
                   <span className="text-white font-bold text-sm">🔥</span>
                 </div>
-                <span className="text-white font-bold text-lg">Blazing</span>
+                <span className="text-white font-bold text-lg text-shadow">BLAZING</span>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 bg-black/20 rounded-full px-2 py-1">
                 <div className="w-4 h-4 bg-blue-400 rounded-full" />
                 <span className="text-white font-bold text-sm">999</span>
               </div>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 bg-black/20 rounded-full px-2 py-1">
                 <div className="w-4 h-4 bg-purple-400 rounded-full" />
                 <span className="text-white font-bold text-sm">50</span>
               </div>
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 bg-black/20 rounded-full px-2 py-1">
                 <div className="w-4 h-4 bg-green-400 rounded-full" />
-                <span className="text-white font-bold text-sm">120/120</span>
+                <span className="text-white font-bold text-sm">120</span>
               </div>
             </div>
           </div>
@@ -53,14 +57,44 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
       
       {/* Footer Navigation */}
       {showFooter && (
-        <div className="flex-none bg-gradient-to-r from-gray-800 to-gray-900 px-2 py-2 shadow-lg">
+        <div className="flex-none bg-gradient-to-r from-gray-800 to-gray-900 px-2 py-2 shadow-lg border-t border-gray-700">
           <div className="flex justify-around items-center">
-            <FooterButton icon="🏠" label="Home" active />
-            <FooterButton icon="⭐" label="Summon" />
-            <FooterButton icon="📦" label="Box" />
-            <FooterButton icon="🗺️" label="Story" />
-            <FooterButton icon="⚔️" label="Battle" />
-            <FooterButton icon="⚙️" label="More" />
+            <FooterButton 
+              icon="🏠" 
+              label="Home" 
+              active={currentScreen === 'home'} 
+              onClick={() => onNavigate?.('home')}
+            />
+            <FooterButton 
+              icon="⭐" 
+              label="Summon" 
+              active={currentScreen === 'summon'} 
+              onClick={() => onNavigate?.('summon')}
+            />
+            <FooterButton 
+              icon="📦" 
+              label="Box" 
+              active={currentScreen === 'box'} 
+              onClick={() => onNavigate?.('box')}
+            />
+            <FooterButton 
+              icon="🗺️" 
+              label="Story" 
+              active={currentScreen === 'story'} 
+              onClick={() => onNavigate?.('story')}
+            />
+            <FooterButton 
+              icon="⚔️" 
+              label="Battle" 
+              active={currentScreen === 'battle'} 
+              onClick={() => onNavigate?.('battle')}
+            />
+            <FooterButton 
+              icon="⚙️" 
+              label="More" 
+              active={currentScreen === 'settings'} 
+              onClick={() => onNavigate?.('settings')}
+            />
           </div>
         </div>
       )}

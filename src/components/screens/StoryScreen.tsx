@@ -3,9 +3,13 @@ import { MobileLayout } from '../mobile/MobileLayout';
 import { Stage } from '../../types/blazing';
 import { STORY_STAGES, EMERGENCY_MISSIONS } from '../../data/stages';
 
-export const StoryScreen: React.FC = () => {
+interface StoryScreenProps {
+  onNavigate: (screen: string) => void;
+}
+
+export const StoryScreen: React.FC<StoryScreenProps> = ({ onNavigate }) => {
   return (
-    <MobileLayout>
+    <MobileLayout currentScreen="story" onNavigate={onNavigate}>
       <div className="flex flex-col h-full overflow-y-auto">
         {/* Mode Selector */}
         <div className="px-4 py-3">

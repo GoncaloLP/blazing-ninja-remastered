@@ -3,7 +3,11 @@ import { MobileLayout } from '../mobile/MobileLayout';
 import { BlaziingCharacter } from '../../types/blazing';
 import { STARTER_CHARACTERS } from '../../data/characters';
 
-export const BoxScreen: React.FC = () => {
+interface BoxScreenProps {
+  onNavigate: (screen: string) => void;
+}
+
+export const BoxScreen: React.FC<BoxScreenProps> = ({ onNavigate }) => {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'HRT' | 'SKL' | 'BOD' | 'BRV' | 'WIS'>('all');
   const [selectedCharacter, setSelectedCharacter] = useState<BlaziingCharacter | null>(null);
   
@@ -26,7 +30,7 @@ export const BoxScreen: React.FC = () => {
   }
 
   return (
-    <MobileLayout>
+    <MobileLayout currentScreen="box" onNavigate={onNavigate}>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600">
