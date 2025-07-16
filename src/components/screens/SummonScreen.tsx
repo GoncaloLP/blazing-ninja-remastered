@@ -5,15 +5,21 @@ import { CHARACTERS } from '../../data/characters';
 
 interface SummonScreenProps {
   onNavigate: (screen: string) => void;
+  playerData: import('../../types/blazing').PlayerData;
+  onCharacterObtained: (character: import('../../types/blazing').BlaziingCharacter) => void;
+  onSpendPearls: (amount: number) => void;
 }
 
-export const SummonScreen: React.FC<SummonScreenProps> = ({ onNavigate }) => {
+export const SummonScreen: React.FC<SummonScreenProps> = ({ onNavigate, playerData, onCharacterObtained, onSpendPearls }) => {
   const [selectedBanner, setSelectedBanner] = useState<'blazing' | 'rookie'>('blazing');
   const [summoning, setSummoning] = useState(false);
   const [summonResults, setSummonResults] = useState<BlaziingCharacter[]>([]);
   const [showResults, setShowResults] = useState(false);
 
   const performSummon = (type: 'single' | 'multi') => {
+    const cost = type === 'single' ? 5 : 40;
+    if (playerData.currency.pearls < cost) return;
+    
     setSummoning(true);
     
     setTimeout(() => {
@@ -50,6 +56,10 @@ export const SummonScreen: React.FC<SummonScreenProps> = ({ onNavigate }) => {
       setSummonResults(results);
       setSummoning(false);
       setShowResults(true);
+      
+      // Spend pearls and add characters to collection
+      onSpendPearls(cost);
+      results.forEach(char => onCharacterObtained(char));
     }, 2000);
   };
 
@@ -140,12 +150,14 @@ export const SummonScreen: React.FC<SummonScreenProps> = ({ onNavigate }) => {
               type="single"
               cost={5}
               onSummon={() => performSummon('single')}
+              disabled={playerData.currency.pearls < 5}
             />
             <SummonButton
               type="multi"
               cost={40}
               onSummon={() => performSummon('multi')}
               discount="10 for 8!"
+              disabled={playerData.currency.pearls < 40}
             />
           </div>
         </div>
@@ -195,12 +207,14 @@ interface SummonButtonProps {
   cost: number;
   discount?: string;
   onSummon: () => void;
+  disabled?: boolean;
 }
 
-const SummonButton: React.FC<SummonButtonProps> = ({ type, cost, discount, onSummon }) => (
+const SummonButton: React.FC<SummonButtonProps> = ({ type, cost, discount, onSummon, disabled = false }) => (
   <button
     onClick={onSummon}
-    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-4 px-6 rounded-lg shadow-lg active:scale-95 transition-all"
+    disabled={disabled}
+    className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-500 disabled:to-gray-600 disabled:opacity-50 text-white font-bold py-4 px-6 rounded-lg shadow-lg active:scale-95 transition-all"
   >
     <div className="flex justify-between items-center">
       <div className="text-left">

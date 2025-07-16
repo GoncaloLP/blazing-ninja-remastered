@@ -5,14 +5,15 @@ import { STARTER_CHARACTERS } from '../../data/characters';
 
 interface BoxScreenProps {
   onNavigate: (screen: string) => void;
+  playerData: import('../../types/blazing').PlayerData;
+  onLevelUp: (characterId: string) => void;
 }
 
-export const BoxScreen: React.FC<BoxScreenProps> = ({ onNavigate }) => {
+export const BoxScreen: React.FC<BoxScreenProps> = ({ onNavigate, playerData, onLevelUp }) => {
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'HRT' | 'SKL' | 'BOD' | 'BRV' | 'WIS'>('all');
   const [selectedCharacter, setSelectedCharacter] = useState<BlaziingCharacter | null>(null);
   
-  // For demo purposes, using starter characters
-  const playerCharacters = STARTER_CHARACTERS;
+  const playerCharacters = playerData.box.characters;
 
   const filteredCharacters = selectedFilter === 'all' 
     ? playerCharacters 
@@ -24,6 +25,8 @@ export const BoxScreen: React.FC<BoxScreenProps> = ({ onNavigate }) => {
         <CharacterDetailScreen 
           character={selectedCharacter} 
           onBack={() => setSelectedCharacter(null)}
+          onLevelUp={onLevelUp}
+          playerData={playerData}
         />
       </MobileLayout>
     );
@@ -167,9 +170,11 @@ const CharacterBoxCard: React.FC<CharacterBoxCardProps> = ({ character, onClick 
 interface CharacterDetailScreenProps {
   character: BlaziingCharacter;
   onBack: () => void;
+  onLevelUp: (characterId: string) => void;
+  playerData: import('../../types/blazing').PlayerData;
 }
 
-const CharacterDetailScreen: React.FC<CharacterDetailScreenProps> = ({ character, onBack }) => {
+const CharacterDetailScreen: React.FC<CharacterDetailScreenProps> = ({ character, onBack, onLevelUp, playerData }) => {
   const getElementColor = (element: string) => {
     switch (element) {
       case 'HRT': return 'from-red-500 to-pink-500';
@@ -285,6 +290,25 @@ const CharacterDetailScreen: React.FC<CharacterDetailScreenProps> = ({ character
               {character.abilities.map((ability, index) => (
                 <p key={index} className="text-sm opacity-80">• {ability}</p>
               ))}
+            </div>
+          </div>
+
+          {/* Level Up Section */}
+          <div className="bg-white/10 rounded-lg p-4">
+            <h3 className="font-bold mb-3">Level Up</h3>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm">Current Level: {character.level}/{character.maxLevel}</p>
+                <p className="text-sm opacity-80">Cost: {character.level * 1000} Ryo</p>
+                <p className="text-sm opacity-80">Your Ryo: {playerData.currency.ryo.toLocaleString()}</p>
+              </div>
+              <button
+                onClick={() => onLevelUp(character.id)}
+                disabled={character.level >= character.maxLevel || playerData.currency.ryo < character.level * 1000}
+                className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 disabled:from-gray-500 disabled:to-gray-600 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg shadow-lg active:scale-95 transition-all"
+              >
+                {character.level >= character.maxLevel ? 'Max Level' : 'Level Up'}
+              </button>
             </div>
           </div>
         </div>

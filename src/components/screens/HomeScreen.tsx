@@ -3,9 +3,10 @@ import { MobileLayout } from '../mobile/MobileLayout';
 
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
+  playerData: import('../../types/blazing').PlayerData;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, playerData }) => {
   return (
     <MobileLayout currentScreen="home" onNavigate={onNavigate}>
       <div className="flex flex-col h-full">
